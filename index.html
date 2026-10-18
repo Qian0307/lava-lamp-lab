@@ -1,0 +1,768 @@
+<title>熔岩燈小實驗室</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* Layout: sticky bottle stage on the left, one lesson step at a time on the right; stacks on phones. */
+:root{
+  --bg:#EDF2F8; --surface:#FFFFFF; --ink:#13243B; --ink2:#4A5D75; --line:#CBD7E5;
+  --accent:#B35A00; --on-accent:#FFFFFF; --water:#2F7FD3; --oil:#F2B632; --good:#1F7F4B; --good-bg:#E2F3E8;
+  --stage:#DCE8F5; --stage-dark:#0B1220; --soft:#F6F9FC; --gold:#9A6A00; --gold-bg:#FFF3D0;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C1424; --surface:#131E33; --ink:#E8EEF7; --ink2:#9FB0C8; --line:#263754;
+    --accent:#FF9A3C; --on-accent:#1A1206; --water:#4C9BFF; --oil:#F5C453; --good:#4CC38A; --good-bg:#12322A;
+    --stage:#162540; --stage-dark:#060B15; --soft:#0F192C; --gold:#F5C453; --gold-bg:#3A2D0B; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C1424; --surface:#131E33; --ink:#E8EEF7; --ink2:#9FB0C8; --line:#263754;
+  --accent:#FF9A3C; --on-accent:#1A1206; --water:#4C9BFF; --oil:#F5C453; --good:#4CC38A; --good-bg:#12322A;
+  --stage:#162540; --stage-dark:#060B15; --soft:#0F192C; --gold:#F5C453; --gold-bg:#3A2D0B; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.7;
+  padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.kicker{margin:0;font-size:13px;letter-spacing:.12em;color:var(--ink2);font-weight:500}
+h1{margin:2px 0 0;font-size:clamp(28px,5vw,40px);line-height:1.2;font-weight:900;text-wrap:balance}
+.sub{margin:6px 0 0;color:var(--ink2);max-width:36em}
+.steps{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.steps button{flex:1 0 auto;display:flex;align-items:center;gap:8px;padding:9px 14px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);
+  border-radius:999px;font:inherit;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+.steps button .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--soft);border:1px solid var(--line);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.steps button[aria-current="step"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.steps button[aria-current="step"] .n{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.lab{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:22px;align-items:start}
+.stage{position:sticky;top:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+canvas{display:block;width:100%;max-width:360px;aspect-ratio:320/540;border-radius:20px;border:1px solid var(--line);background:var(--stage)}
+.stage-bar{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:14px;color:var(--ink2)}
+.stage-bar label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.stage-bar input{accent-color:var(--accent);width:18px;height:18px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:24px;min-width:0;display:flex;flex-direction:column;gap:16px}
+.panel h2{margin:0;font-size:24px;line-height:1.3;font-weight:900;text-wrap:balance}
+.panel p{margin:0}
+.step{display:flex;flex-direction:column;gap:16px}
+.step[hidden],[hidden]{display:none!important}
+.lead{color:var(--ink2)}
+.q{font-size:18px;font-weight:700}
+.choices{display:grid;gap:10px}
+.choice{display:flex;gap:12px;align-items:center;padding:14px 16px;border:2px solid var(--line);border-radius:14px;cursor:pointer;background:var(--soft);font-weight:500}
+.choice input{accent-color:var(--accent);width:20px;height:20px;flex:none}
+.choice:has(input:checked){border-color:var(--accent);background:var(--surface)}
+.choice .k{font-weight:900;color:var(--accent)}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.btn{padding:12px 18px;border-radius:12px;border:2px solid var(--accent);background:var(--accent);color:var(--on-accent);font:inherit;font-weight:700;font-size:16px;cursor:pointer}
+.btn.alt{background:transparent;color:var(--accent)}
+.btn.ghost,.ghost{background:transparent;border:1px solid var(--line);color:var(--ink2);border-radius:10px;padding:6px 12px;font:inherit;font-size:14px;cursor:pointer}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+.status{padding:10px 14px;background:var(--soft);border:1px dashed var(--line);border-radius:12px;color:var(--ink2);font-size:15px}
+.find{padding:14px 16px;border-radius:14px;background:var(--good-bg);color:var(--ink)}
+.find b.tag{display:block;font-size:12px;letter-spacing:.1em;color:var(--good);margin-bottom:2px}
+.look{margin:0;padding-left:1.3em;color:var(--ink2)}
+.look li{margin:2px 0}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:4px;padding-top:14px;border-top:1px solid var(--line)}
+.scalebox{background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:8px}
+svg.scale{display:block;width:100%;height:auto}
+svg .ln{stroke:var(--ink);stroke-width:3;stroke-linecap:round;fill:none}
+svg .thin{stroke:var(--ink2);stroke-width:1.5;fill:none}
+svg .t{fill:var(--ink);font:700 13px var(--font);text-anchor:middle}
+svg .t2{fill:var(--ink2);font:500 12px var(--font);text-anchor:middle}
+.phases{display:grid;gap:10px;counter-reset:ph;padding:0;margin:0;list-style:none}
+.phases li{counter-increment:ph;display:grid;grid-template-columns:32px 1fr;gap:12px;align-items:start}
+.phases li::before{content:counter(ph);display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--ink);color:var(--bg);font-weight:900}
+.secret{padding:16px;border-radius:14px;border:2px solid var(--line);background:var(--soft)}
+.secret b{display:block;font-size:13px;letter-spacing:.1em;color:var(--accent)}
+.secret span{font-size:18px;font-weight:700}
+.chipnote{font-size:14px;color:var(--ink2)}
+@media (max-width:820px){
+  .lab{grid-template-columns:minmax(0,1fr)}
+  .stage{position:static;align-items:center}
+  .stage-bar{justify-content:center}
+  canvas{max-width:300px}
+  .panel{padding:18px}
+}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+
+/* ---- mission UI ---- */
+.hud{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.hud-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.stars{font-size:26px;font-weight:900;color:var(--gold);line-height:1}
+.stars small{font-size:14px;font-weight:500;color:var(--ink2);margin-left:4px}
+.stars.pop{animation:pop .5s ease}
+@keyframes pop{40%{transform:scale(1.25)}}
+.rank{font-weight:900;font-size:15px;padding:4px 12px;border-radius:999px;background:var(--gold-bg);color:var(--gold)}
+.bar{height:10px;border-radius:999px;background:var(--soft);border:1px solid var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:999px;transition:width .5s}
+.badges{display:flex;flex-wrap:wrap;gap:8px}
+.badge{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 6px;border-radius:999px;border:1px dashed var(--line);color:var(--ink2);font-size:13px;font-weight:500}
+.badge .e{font-size:18px;filter:grayscale(1);opacity:.45}
+.badge.on{border:1px solid var(--gold);background:var(--gold-bg);color:var(--ink);font-weight:700}
+.badge.on .e{filter:none;opacity:1}
+.toast{position:absolute;right:14px;top:-14px;background:var(--ink);color:var(--bg);padding:6px 14px;border-radius:999px;font-weight:700;font-size:14px;opacity:0;transform:translateY(6px);transition:.3s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+.steps button .n{font-size:13px}
+.steps button.done .n{background:var(--good);border-color:var(--good);color:#fff}
+.mhead{display:flex;flex-direction:column;gap:2px}
+.lvl{font-size:13px;font-weight:700;letter-spacing:.12em;color:var(--accent)}
+.goal{display:flex;gap:10px;padding:12px 14px;border-radius:14px;background:var(--gold-bg);color:var(--ink)}
+.goal b{color:var(--gold)}
+.blk{display:flex;flex-direction:column;gap:10px}
+.bl{font-size:14px;font-weight:700;color:var(--ink2);letter-spacing:.04em}
+.obs{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.obs label{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:10px;background:var(--soft);border:1px solid var(--line);cursor:default;font-size:15px}
+.obs label.manual{cursor:pointer}
+.obs input{width:20px;height:20px;accent-color:var(--good);flex:none}
+.obs label.ok{background:var(--good-bg);border-color:var(--good);font-weight:500}
+.disc{padding:14px 16px;border-radius:14px;background:var(--good-bg);border:1px solid var(--good)}
+.disc b.tag{display:block;font-size:13px;letter-spacing:.1em;color:var(--good);margin-bottom:2px}
+.quiz{border:2px dashed var(--line);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.quiz.won{border-style:solid;border-color:var(--gold);background:var(--gold-bg)}
+.quiz .qt{font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--gold)}
+.quiz .opts{display:grid;gap:8px}
+.quiz .opt{text-align:left;padding:12px 14px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
+.quiz .opt:disabled{cursor:default}
+.quiz .opt.bad{border-color:#C0392B;opacity:.55;text-decoration:line-through}
+.quiz .opt.good{border-color:var(--good);background:var(--good-bg);font-weight:700}
+.quiz .fb{margin:0;font-size:15px}
+.quiz.locked .opts{opacity:.5;pointer-events:none}
+.cert{text-align:center;padding:20px;border-radius:18px;border:3px double var(--gold);background:var(--gold-bg)}
+.cert .big{font-size:48px;line-height:1.1}
+.cert h3{margin:6px 0;font-size:24px;font-weight:900}
+.cert input{font:inherit;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);width:min(220px,100%);text-align:center}
+@media (prefers-reduced-motion: reduce){.stars.pop{animation:none}.bar i,.toast{transition:none}}
+
+/* ---- fun layer ---- */
+.mascot{display:flex;gap:10px;align-items:flex-end}
+.mascot svg{flex:none}
+.mascot.talk svg{animation:hop .5s}
+@keyframes hop{40%{transform:translateY(-8px) rotate(-4deg)}}
+.bubble{position:relative;flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:14px;line-height:1.55;color:var(--ink)}
+.bubble::before{content:"";position:absolute;left:-7px;bottom:16px;width:12px;height:12px;background:var(--surface);border-left:1px solid var(--line);border-bottom:1px solid var(--line);transform:rotate(45deg)}
+.sws{display:flex;align-items:center;gap:6px}
+.sw{width:26px;height:26px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 3px var(--ink)}
+#conf{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+#conf span{position:absolute;font-size:22px;animation:burst 1.5s ease-out forwards}
+@keyframes burst{0%{transform:translate(0,0) scale(.5);opacity:1}60%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(1.1);opacity:1}100%{transform:translate(var(--dx),calc(var(--dy) + 260px)) rotate(var(--rot)) scale(.9);opacity:0}}
+canvas{touch-action:manipulation}
+@media (min-width:821px){canvas{max-width:min(360px,calc((100vh - 250px)*.5926))}}
+@media (prefers-reduced-motion: reduce){.mascot.talk svg{animation:none}#conf{display:none}}
+</style>
+
+<div id="conf" aria-hidden="true"></div>
+<div class="wrap">
+  <header>
+    <p class="kicker">自然探究課・第 3 堂・偵探任務</p>
+    <h1>熔岩燈偵探任務</h1>
+    <p class="sub">火山島的魔法燈藏著兩個祕密。闖過 6 個關卡、集滿 12 顆星，就能拿到金牌自然偵探！</p>
+  </header>
+
+  <section class="hud" aria-label="任務進度">
+    <div class="hud-top">
+      <div class="stars" id="stars"><span id="starN">0</span><small>/ 12 顆星</small></div>
+      <div class="rank" id="rank">見習偵探</div>
+    </div>
+    <div class="bar" role="progressbar" aria-label="星星進度" aria-valuemin="0" aria-valuemax="12" id="barBox"><i id="barFill"></i></div>
+    <div class="badges" id="badges"></div>
+    <div class="toast" id="toast" role="status"></div>
+  </section>
+
+  <nav class="steps" id="stepNav" aria-label="關卡"></nav>
+
+  <main class="lab">
+    <div class="stage">
+      <canvas id="cv" aria-label="熔岩燈瓶子的模擬畫面"></canvas>
+      <div class="stage-bar">
+        <label><input type="checkbox" id="tgLabels" checked> 顯示說明</label>
+        <label><input type="checkbox" id="tgLight"> 開手電筒</label>
+        <label><input type="checkbox" id="tgSound" checked> 音效</label>
+        <button class="ghost" id="btnReset" type="button">清空瓶子</button>
+      </div>
+      <div class="stage-bar">
+        <span>水的顏色</span>
+        <span class="sws" id="sws"></span>
+        <span class="chipnote">戳破水球：<b id="popN">0</b></span>
+      </div>
+      <div class="mascot" id="mascot">
+        <svg viewBox="0 0 80 80" width="76" height="76" aria-hidden="true">
+          <circle cx="30" cy="11" r="5" fill="var(--water)"/><circle cx="45" cy="15" r="3.5" fill="var(--oil)"/><circle cx="52" cy="6" r="2.5" fill="var(--water)"/>
+          <path d="M8 72 L27 28 H53 L72 72 Z" fill="var(--accent)" stroke="var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>
+          <ellipse cx="40" cy="28" rx="14" ry="5.5" fill="var(--oil)" stroke="var(--ink)" stroke-width="2.5"/>
+          <circle cx="32" cy="51" r="5" fill="#fff"/><circle cx="48" cy="51" r="5" fill="#fff"/>
+          <circle cx="33" cy="52" r="2.4" fill="#13243B"/><circle cx="49" cy="52" r="2.4" fill="#13243B"/>
+          <path d="M33 62 Q40 69 47 62" fill="none" stroke="#13243B" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <div class="bubble" id="bubble" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <!-- 關卡 1 -->
+      <section class="step" data-step="0">
+        <div class="mhead"><span class="lvl">關卡 1 / 6</span><h2>任務簡報：火山島的魔法燈</h2></div>
+        <div class="goal"><span>🎯</span><span><b>任務目標</b>　對「油倒進水裡」做出預測。</span></div>
+        <p class="lead">島上的魔法師做了一盞會自己動的燈，但沒人知道怎麼做的。你是自然偵探，要找出燈裡的祕密。</p>
+        <div class="blk">
+          <span class="bl">🖐️ 動手做</span>
+          <p class="q">先猜猜看：把油倒進水裡，會發生什麼事？</p>
+          <div class="choices" role="radiogroup" aria-label="我的預測">
+            <label class="choice"><input type="radio" name="pred" value="a"><span><span class="k">A</span>　油和水混在一起</span></label>
+            <label class="choice"><input type="radio" name="pred" value="b"><span><span class="k">B</span>　油在上面，水在下面</span></label>
+            <label class="choice"><input type="radio" name="pred" value="c"><span><span class="k">C</span>　水在上面，油在下面</span></label>
+          </div>
+        </div>
+        <div class="blk"><span class="bl">👀 檢查表</span><ul class="obs" data-obs="0"></ul></div>
+        <div class="disc" data-disc="0" hidden><b class="tag">💡 偵探守則</b>先預測，再做實驗找證據。預測錯了也沒關係，那才是發現！</div>
+        <div class="quiz" data-quiz="0"></div>
+      </section>
+
+      <!-- 關卡 2 -->
+      <section class="step" data-step="1" hidden>
+        <div class="mhead"><span class="lvl">關卡 2 / 6</span><h2>倒一倒、搖一搖</h2></div>
+        <div class="goal"><span>🎯</span><span><b>任務目標</b>　看看油和水放在一起會怎樣。</span></div>
+        <div class="blk">
+          <span class="bl">🖐️ 動手做（照順序）</span>
+          <div class="actions">
+            <button class="btn" id="bOil" type="button">① 倒油</button>
+            <button class="btn" id="bWater" type="button">② 倒有色水</button>
+            <button class="btn alt" id="bShake" type="button">③ 搖一搖</button>
+          </div>
+          <p class="status" id="st2" aria-live="polite"></p>
+          <div><button class="ghost" id="bPreset" type="button">直接準備好瓶子（跳過倒的步驟）</button></div>
+        </div>
+        <div class="blk"><span class="bl">👀 觀察檢查表</span><ul class="obs" data-obs="1"></ul></div>
+        <div class="disc" data-disc="1" hidden><b class="tag">💡 偵探發現一</b><span id="resPred"></span><br>油和水分成兩層，油在上面、水在下面。搖亂了，它們也會自己分開。</div>
+        <div class="quiz" data-quiz="1"></div>
+      </section>
+
+      <!-- 關卡 3 -->
+      <section class="step" data-step="2" hidden>
+        <div class="mhead"><span class="lvl">關卡 3 / 6</span><h2>天平裁判：誰比較輕？</h2></div>
+        <div class="goal"><span>🎯</span><span><b>任務目標</b>　用天平找出油和水誰比較重，而且要比得公平。</span></div>
+        <div class="blk">
+          <span class="bl">🖐️ 動手做（兩種都試試）</span>
+          <div class="choices" role="radiogroup" aria-label="天平設定">
+            <label class="choice"><input type="radio" name="scale" value="same" checked><span>同樣多：油 100 mL、水 100 mL</span></label>
+            <label class="choice"><input type="radio" name="scale" value="more"><span>油比較多：油 300 mL、水 100 mL</span></label>
+          </div>
+          <div class="scalebox"><svg class="scale" id="scaleSvg" viewBox="0 0 360 255" role="img" aria-label="天平比較油和水的重量"></svg></div>
+          <p class="find" id="scaleMsg"></p>
+        </div>
+        <div class="blk"><span class="bl">👀 觀察檢查表</span><ul class="obs" data-obs="2"></ul></div>
+        <div class="disc" data-disc="2" hidden><b class="tag">💡 偵探發現二</b>同樣多的時候，油比水輕。所以油會浮在水上面。比輕重一定要「同樣多」才公平。</div>
+        <div class="quiz" data-quiz="2"></div>
+      </section>
+
+      <!-- 關卡 4 -->
+      <section class="step" data-step="3" hidden>
+        <div class="mhead"><span class="lvl">關卡 4 / 6</span><h2>丟發泡錠：魔法啟動</h2></div>
+        <div class="goal"><span>🎯</span><span><b>任務目標</b>　讓水球動起來，抓到它上上下下的三個畫面。</span></div>
+        <div class="blk">
+          <span class="bl">🖐️ 動手做</span>
+          <p class="q">先猜：半顆和一整顆，哪一個冒得比較久？</p>
+          <div class="actions">
+            <button class="btn" id="bHalf" type="button">丟半顆</button>
+            <button class="btn alt" id="bWhole" type="button">丟一整顆</button>
+          </div>
+          <p class="status" id="st4" aria-live="polite"></p>
+          <div><button class="ghost" id="bPreset2" type="button">直接準備好瓶子</button></div>
+        </div>
+        <div class="blk"><span class="bl">👀 觀察檢查表</span><ul class="obs" data-obs="3"></ul></div>
+        <div class="disc" data-disc="3" hidden><b class="tag">💡 偵探發現三</b>發泡錠一碰到水就冒出氣泡。發泡錠越多，氣泡越多，水球就上上下下動得越久。</div>
+        <div class="quiz" data-quiz="3"></div>
+      </section>
+
+      <!-- 關卡 5 -->
+      <section class="step" data-step="4" hidden>
+        <div class="mhead"><span class="lvl">關卡 5 / 6</span><h2>氣泡電梯</h2></div>
+        <div class="goal"><span>🎯</span><span><b>任務目標</b>　弄懂水球為什麼會上去又下來。</span></div>
+        <div class="blk">
+          <span class="bl">🖐️ 動手做</span>
+          <div class="actions"><button class="btn alt" id="bAgain" type="button">再丟一顆看看</button></div>
+          <p class="status" id="st5" aria-live="polite"></p>
+        </div>
+        <div class="blk"><span class="bl">👀 觀察檢查表（盯著瓶子找）</span><ul class="obs" data-obs="4"></ul></div>
+        <div class="disc" data-disc="4" hidden>
+          <b class="tag">💡 偵探發現四：氣泡電梯三步驟</b>
+          <ol class="phases">
+            <li><span>發泡錠沉到水裡，遇水冒出<b>二氧化碳</b>氣泡。</span></li>
+            <li><span>氣泡像小救生圈，抱住有色水球，整團變輕，<b>往上浮</b>。</span></li>
+            <li><span>到了油的上面，氣泡破掉，氣體跑走。水球變回比較重，<b>沉下去</b>，再等下一批氣泡。</span></li>
+          </ol>
+          <p class="chipnote" style="margin-top:8px">想一想：這個氣泡和第 1 堂吹大氣球的氣體，是不是同一種？</p>
+        </div>
+        <div class="quiz" data-quiz="4"></div>
+      </section>
+
+      <!-- 關卡 6 -->
+      <section class="step" data-step="5" hidden>
+        <div class="mhead"><span class="lvl">關卡 6 / 6</span><h2>我是小老師</h2></div>
+        <div class="goal"><span>🎯</span><span><b>任務目標</b>　告訴魔法師熔岩燈的兩個祕密，還要說出證據。</span></div>
+        <div class="blk">
+          <span class="bl">🖐️ 動手做（用自己的話說，說完就打勾）</span>
+          <div class="secret"><b>祕密 1</b><span>油比水輕，而且油和水不會混在一起，所以分成兩層。</span></div>
+          <div class="secret"><b>祕密 2</b><span>發泡錠冒出二氧化碳氣泡，氣泡帶著水球往上浮，到上面破掉，水球又沉下來。</span></div>
+        </div>
+        <div class="blk"><span class="bl">👀 檢查表</span><ul class="obs" data-obs="5"></ul></div>
+        <div class="quiz" data-quiz="5"></div>
+        <div class="cert" id="cert" hidden>
+          <div class="big">🏅</div>
+          <h3>金牌自然偵探</h3>
+          <p><input id="nameIn" type="text" placeholder="寫上偵探名字" maxlength="12" aria-label="偵探名字"></p>
+          <p id="certTxt">12 顆星全部到手，任務完成！</p>
+        </div>
+        <div class="actions"><button class="btn alt" id="bRestart" type="button">從頭再玩一次</button></div>
+      </section>
+
+      <div class="nav">
+        <button class="ghost" id="bPrev" type="button">上一關</button>
+        <button class="btn" id="bNext" type="button">下一關</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+const STEPS=['任務簡報','倒一倒','天平裁判','發泡錠','氣泡電梯','小老師'];
+const BADGES=[['🔎','預測偵探'],['🧪','實驗員'],['⚖️','公平裁判'],['🫧','氣泡工程師'],['🛗','電梯專家'],['🎓','小老師']];
+const QUIZ=[
+ {q:'偵探要找出答案，最可靠的方法是什麼？',o:['憑感覺猜','做實驗，看證據','問別人就好'],a:1,why:'對！先預測，再用實驗和觀察找證據。'},
+ {q:'把瓶子搖亂以後，等一等會怎樣？',o:['油和水永遠混在一起','油和水又分成兩層','油全部不見了'],a:1,why:'油和水不會互相混合，而且油比較輕，所以會回到上面。'},
+ {q:'比油和水的輕重，為什麼要用「同樣多」？',o:['這樣比較好看','不然量多的那邊可能只是因為多才比較重','因為油比較貴'],a:1,why:'公平比較，才知道是油「本身」比較輕。'},
+ {q:'半顆和一整顆發泡錠，哪個冒氣泡比較久？',o:['半顆','一整顆','一樣久'],a:1,why:'整顆材料比較多，會冒出更多二氧化碳，所以冒得比較久。'},
+ {q:'水球漂到油的上面，氣泡破掉以後，水球會怎樣？',o:['繼續往上飛','變回比較重，沉下去','變成油'],a:1,why:'氣體跑走了，水球不再被氣泡抱著，比油重，就沉下去。'},
+ {q:'證據題：怎麼證明「油比水輕」？',o:['同樣多的油和水放天平，油比較輕，而且油浮在水上面','因為油是黃色的','因為我覺得'],a:0,why:'有兩個證據：天平，還有油浮在水上面的樣子。'}
+];
+const LVL_SAY=['嗨，我是熔熔！火山島的魔法燈壞掉了，偵探快來幫忙～先預測一下吧！','先倒油、再倒有色水，然後搖一搖！看看它們會不會混在一起。','換天平出場！兩種都試試，看看誰比較輕。','準備好了嗎？丟發泡錠！也可以直接點水球，把牠戳破喔。','這關要專心看：氣泡怎麼抱住水球？開手電筒會更好看！','最後一關！把兩個祕密教給我，我想當你的學生。'];
+const COLS=[['藍',null],['紅','#E5484D'],['綠','#2FA66A'],['紫','#8E5BD6']];
+let wcol=null,popped=0,bonusDone=false;
+let step=0, pred=null;
+const A=[0,0,0,0,0,0], Q=[0,0,0,0,0,0], seen={same:false,more:false,fizz:false,up:false,down:false,light:false};
+const manual={c1:false,c2:false};
+const $=id=>document.getElementById(id);
+const secs=[...document.querySelectorAll('.step')];
+
+/* ---------- stepper ---------- */
+const nav=$('stepNav');
+STEPS.forEach((s,i)=>{const b=document.createElement('button');b.type='button';b.innerHTML='<span class="n">'+(i+1)+'</span>'+s;b.dataset.i=i;b.addEventListener('click',()=>go(i));nav.appendChild(b)});
+function go(i){
+  step=Math.max(0,Math.min(STEPS.length-1,i));
+  secs.forEach((s,k)=>s.hidden=(k!==step));
+  [...nav.children].forEach((b,k)=>{if(k===step)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});
+  if(step===2)seen[sc.mode]=true;
+  say(LVL_SAY[step],true);
+  $('bPrev').style.visibility=step===0?'hidden':'visible';
+  $('bNext').style.display=step===STEPS.length-1?'none':'';
+  try{nav.children[step].scrollIntoView({inline:'center',block:'nearest'})}catch(e){}
+  ui();
+}
+$('bPrev').onclick=()=>go(step-1);
+$('bNext').onclick=()=>go(step+1);
+$('tgLight').addEventListener('change',e=>{if(e.target.checked)seen.light=true});
+document.querySelectorAll('input[name=pred]').forEach(r=>r.addEventListener('change',()=>{
+  pred=r.value;ui();}));
+
+/* ---------- colours from tokens ---------- */
+const C={};
+function readColors(){
+  const cs=getComputedStyle(document.documentElement);
+  ['water','oil','ink','stage','stage-dark','line'].forEach(k=>C[k]=cs.getPropertyValue('--'+k).trim());
+}
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readColors);
+new MutationObserver(readColors).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ---------- simulation ---------- */
+const cv=$('cv'),ctx=cv.getContext('2d');
+const W=320,H=540,BOT=510,L=50,R=270,OIL_MAX=260,WATER_MAX=75;
+const dpr=Math.min(window.devicePixelRatio||1,2);
+cv.width=W*dpr;cv.height=H*dpr;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const bottle=new Path2D();
+bottle.moveTo(125,34);bottle.lineTo(195,34);bottle.lineTo(195,100);
+bottle.bezierCurveTo(195,125,270,120,270,160);bottle.lineTo(270,478);
+bottle.quadraticCurveTo(270,510,238,510);bottle.lineTo(82,510);
+bottle.quadraticCurveTo(50,510,50,478);bottle.lineTo(50,160);
+bottle.bezierCurveTo(50,120,125,125,125,100);bottle.closePath();
+
+let S;
+function fresh(){S={oil:0,water:0,pour:null,beads:[],shake:0,shaken:false,settled:false,tabs:[],blobs:[],bub:[],pops:[],acc:0,fizzed:false,t:0};}
+fresh();
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const wTop=()=>BOT-S.water, oTop=()=>BOT-S.water-S.oil;
+const ready=()=>S.oil>=OIL_MAX-0.5&&S.water>=WATER_MAX-0.5&&!S.pour;
+const WC=()=>wcol||C.water;
+const showLight=()=>$('tgLight').checked, showLabels=()=>$('tgLabels').checked;
+
+function pour(type){ if(S.pour)return; sfx('pour'); say(type==='oil'?'咕嚕咕嚕～倒油中':'倒有色水！看它掉到哪裡？',true); if(type==='oil'&&S.oil>=OIL_MAX)return; if(type==='water'&&S.water>=WATER_MAX)return; S.pour={type}; }
+function shake(){ if(!ready()||S.shake>0||S.beads.length)return; sfx('shake'); say('搖搖搖！等一下看它們會怎樣～',true);
+  S.shake=1.5;S.shaken=true;S.settled=false;S.beads=[];
+  const wt=wTop(),ot=oTop();
+  for(let i=0;i<110;i++){
+    const y=rnd(ot+8,BOT-8),x=rnd(L+12,R-12),oilZone=y<wt;
+    S.beads.push({x,y,r:rnd(3,9),type:oilZone?'w':'o',vx:rnd(-90,90),vy:rnd(-90,90),a:1});
+  }
+}
+function drop(whole){ if(!ready())return; sfx('fizz'); say(whole?'一整顆！會冒比較久嗎？':'半顆下水～',true);
+  S.tabs.push({x:rnd(138,182),y:14,vy:0,state:'fall',left:whole?34:18,dur:whole?34:18,rate:whole?1.6:1});
+}
+function preset(){fresh();S.oil=OIL_MAX;S.water=WATER_MAX;}
+
+function update(dt){
+  S.t+=dt;
+  if(S.pour){
+    const p=S.pour;
+    if(p.type==='oil'){S.oil=Math.min(OIL_MAX,S.oil+115*dt);if(S.oil>=OIL_MAX)S.pour=null}
+    else{S.water=Math.min(WATER_MAX,S.water+40*dt);if(S.water>=WATER_MAX)S.pour=null}
+  }
+  const wt=wTop(),ot=oTop();
+  if(S.shake>0){
+    S.shake-=dt;
+    S.beads.forEach(b=>{b.vx+=rnd(-500,500)*dt;b.vy+=rnd(-500,500)*dt;
+      b.vx=Math.max(-140,Math.min(140,b.vx));b.vy=Math.max(-140,Math.min(140,b.vy));
+      b.x+=b.vx*dt;b.y+=b.vy*dt;
+      if(b.x<L+b.r){b.x=L+b.r;b.vx=Math.abs(b.vx)} if(b.x>R-b.r){b.x=R-b.r;b.vx=-Math.abs(b.vx)}
+      if(b.y<ot+b.r){b.y=ot+b.r;b.vy=Math.abs(b.vy)} if(b.y>BOT-b.r){b.y=BOT-b.r;b.vy=-Math.abs(b.vy)}});
+  }else if(S.beads.length){
+    S.beads.forEach(b=>{
+      const home=(b.type==='w')?(b.y>=wt):(b.y<=wt);
+      if(home){b.a-=dt*2.2}
+      else{const v=(30+b.r*9)*dt; b.y+=(b.type==='w')?v:-v; b.x+=Math.sin(S.t*3+b.r)*6*dt;}
+    });
+    S.beads=S.beads.filter(b=>b.a>0);
+    if(!S.beads.length)S.settled=true;
+  }
+  /* tablets */
+  let rate=0;
+  S.tabs.forEach(t=>{
+    if(t.state==='fall'){
+      t.vy=Math.min(t.vy+380*dt,t.y>ot?150:260);t.y+=t.vy*dt;
+      if(t.y>=BOT-8){t.y=BOT-8;t.state='fizz'}
+    }else{t.left-=dt;rate+=t.rate;mark('fizz','發泡錠冒出氣泡了！那是二氧化碳。');
+      if(Math.random()<dt*16*t.rate)S.bub.push({x:t.x+rnd(-14,14),y:BOT-10,r:rnd(1.5,3.2),vy:rnd(50,95),ph:rnd(0,6)});
+    }
+  });
+  const before=S.tabs.length;
+  S.tabs=S.tabs.filter(t=>t.left>0);
+  if(before&&!S.tabs.length)S.fizzed=true;
+  if(rate>0){
+    S.acc+=dt*rate;
+    if(S.acc>0.55&&S.blobs.length<14){
+      S.acc=0;
+      const src=S.tabs.filter(t=>t.state==='fizz')[0];
+      const r=rnd(9,17),n=Math.round(rnd(3,6)),bubs=[];
+      for(let i=0;i<n;i++){const a=rnd(0,6.28),d=rnd(0,r*.6);bubs.push({dx:Math.cos(a)*d,dy:Math.sin(a)*d,r:rnd(2,4)})}
+      S.blobs.push({x:Math.max(L+r+6,Math.min(R-r-6,(src?src.x:160)+rnd(-24,24))),x0:0,y:BOT-r-6,r,spd:rnd(55,85),state:'up',age:rnd(0,3),bubs});
+      S.blobs[S.blobs.length-1].x0=S.blobs[S.blobs.length-1].x;
+    }
+  }
+  S.blobs.forEach(b=>{
+    b.age+=dt;
+    if(b.state==='up'){mark('up','哇，氣泡抱著水球往上浮了！');
+      b.y-=b.spd*dt;b.x=Math.max(L+b.r+4,Math.min(R-b.r-4,b.x0+Math.sin(b.age*2.2)*10));
+      if(b.y-b.r<=ot+4){
+        b.state='down';mark('down','到頂破掉！水球又沉下來啦～');popSfx();
+        b.bubs.forEach(q=>{for(let k=0;k<2;k++)S.pops.push({x:b.x+q.dx,y:b.y+q.dy,vx:rnd(-50,50),vy:rnd(-90,-30),life:.6,r:q.r*.7})});
+        b.bubs=[];
+      }
+    }else{b.y+=42*dt;b.x+=Math.sin(b.age*2)*6*dt;if(b.y>=wt-b.r*.4)b.dead=true}
+  });
+  S.blobs=S.blobs.filter(b=>!b.dead);
+  S.bub.forEach(b=>{b.y-=b.vy*dt;b.x+=Math.sin(S.t*4+b.ph)*10*dt});
+  S.bub=S.bub.filter(b=>b.y>wt+3);
+  S.pops.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=120*dt;p.life-=dt});
+  S.pops=S.pops.filter(p=>p.life>0);
+}
+
+function pill(text,x,y,align){
+  ctx.font='700 12px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+  const w=ctx.measureText(text).width+14,h=20,px=align==='right'?x-w:x;
+  ctx.fillStyle='rgba(255,255,255,.93)';ctx.beginPath();ctx.roundRect(px,y-h/2,w,h,10);ctx.fill();
+  ctx.fillStyle='#13243B';ctx.textBaseline='middle';ctx.textAlign='left';ctx.fillText(text,px+7,y+.5);
+  return {x0:px,x1:px+w,y};
+}
+
+function draw(){
+  const light=showLight();
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=light?C['stage-dark']:C.stage;ctx.fillRect(0,0,W,H);
+  const wt=wTop(),ot=oTop();
+  const wob=(!reduce&&S.shake>0)?Math.sin(S.t*45)*7*Math.min(1,S.shake):0;
+  ctx.save();ctx.translate(wob,0);
+  /* stream */
+  if(S.pour){
+    const p=S.pour,top=p.type==='oil'?ot:wt;
+    ctx.fillStyle=p.type==='oil'?C.oil:WC();ctx.globalAlpha=.9;
+    const w=p.type==='oil'?10:7;ctx.fillRect(160-w/2,8,w,Math.max(0,top-8));ctx.globalAlpha=1;
+  }
+  /* glass body */
+  ctx.save();ctx.clip(bottle);
+  ctx.fillStyle=light?'rgba(255,255,255,.05)':'rgba(255,255,255,.35)';ctx.fillRect(0,0,W,H);
+  if(S.oil>0){ctx.globalAlpha=.78;ctx.fillStyle=C.oil;ctx.fillRect(L,ot,R-L,S.oil+1);ctx.globalAlpha=1}
+  if(S.water>0){ctx.globalAlpha=.9;ctx.fillStyle=WC();ctx.fillRect(L,wt,R-L,S.water+1);ctx.globalAlpha=1}
+  if(S.oil>0&&S.water>0){ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillRect(L,wt-1,R-L,2)}
+  if(light){
+    const g=ctx.createRadialGradient(160,BOT+10,10,160,BOT+10,300);
+    g.addColorStop(0,'rgba(255,238,170,.62)');g.addColorStop(1,'rgba(255,238,170,0)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }
+  /* beads */
+  S.beads.forEach(b=>{ctx.globalAlpha=Math.max(0,b.a)*.92;ctx.fillStyle=b.type==='w'?WC():C.oil;
+    ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,6.283);ctx.fill();ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=1;ctx.stroke()});
+  ctx.globalAlpha=1;
+  /* free bubbles */
+  ctx.fillStyle='rgba(255,255,255,.85)';
+  S.bub.forEach(b=>{ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,6.283);ctx.fill()});
+  /* blobs */
+  S.blobs.forEach(b=>{
+    ctx.save();ctx.translate(b.x,b.y);const sx=1+.08*Math.sin(b.age*5);ctx.scale(sx,1/sx);
+    if(light){ctx.shadowColor=WC();ctx.shadowBlur=18}
+    ctx.globalAlpha=b.y<wt?.96:.6;ctx.fillStyle=WC();ctx.beginPath();ctx.arc(0,0,b.r,0,6.283);ctx.fill();
+    ctx.shadowBlur=0;ctx.globalAlpha=1;ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.92)';
+    b.bubs.forEach(q=>{ctx.beginPath();ctx.arc(q.dx,q.dy,q.r,0,6.283);ctx.fill()});
+    ctx.restore();
+  });
+  S.pops.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/.6);ctx.fillStyle='rgba(255,255,255,.95)';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);ctx.fill()});
+  ctx.globalAlpha=1;
+  /* tablets */
+  S.tabs.forEach(t=>{
+    const k=t.state==='fall'?1:Math.max(.2,t.left/t.dur);
+    ctx.fillStyle='#FFFFFF';ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(t.x-11*k,t.y-5*k,22*k,10*k,4);ctx.fill();ctx.stroke();
+  });
+  /* highlight strip */
+  ctx.fillStyle='rgba(255,255,255,.16)';ctx.fillRect(L+10,150,10,330);
+  ctx.restore();
+  /* outline */
+  ctx.lineWidth=3;ctx.strokeStyle=light?'rgba(255,255,255,.75)':C.ink;ctx.globalAlpha=.85;ctx.stroke(bottle);ctx.globalAlpha=1;
+  ctx.restore();
+
+  /* empty hint */
+  if(S.oil<=0&&S.water<=0&&!S.pour){
+    ctx.fillStyle=light?'rgba(255,255,255,.8)':'rgba(19,36,59,.65)';ctx.font='700 15px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('空瓶子',160,330);
+    ctx.font='500 13px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';ctx.fillText('先到「倒一倒」倒油',160,355);
+  }
+  /* labels */
+  if(showLabels()){
+    if(S.oil>50&&S.beads.length===0)pill('油層：比較輕',L+8,ot+20,'left');
+    if(S.water>30&&S.beads.length===0)pill('水層：比較重',L+8,wt+20,'left');
+    const up=S.blobs.filter(b=>b.state==='up'&&b.y<wt-20).sort((a,b)=>a.y-b.y)[0];
+    if(up){
+      const right=up.x<190, ax=right?R-8:L+8, al=right?'right':'left';
+      const p1=pill('有色水球',ax,up.y-12,al), p2=pill('CO₂ 氣泡',ax,up.y+12,al);
+      ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=1.5;
+      [p1,p2].forEach(p=>{ctx.beginPath();ctx.moveTo(right?p.x0:p.x1,p.y);ctx.lineTo(up.x+(right?up.r:-up.r)*.8,up.y);ctx.stroke()});
+    }
+    S.tabs.filter(t=>t.state==='fizz').slice(0,1).forEach(t=>pill('發泡錠',Math.min(R-8,t.x+16),BOT-26,'left'));
+  }
+}
+
+/* ---------- scale demo ---------- */
+const svg=$('scaleSvg');
+const sc={cur:0,target:0,mode:'same'};
+function scaleTarget(){
+  const vOil=sc.mode==='same'?100:300, wo=vOil*.92, ww=100;
+  sc.target=Math.max(-16,Math.min(16,(ww-wo)*1.2));
+  $('scaleMsg').innerHTML=sc.mode==='same'
+    ?'<b class="tag">小偵探發現</b>同樣多的時候，水（約 100 g）比油（約 92 g）重，所以水沉下面、油浮上面。'
+    :'<b class="tag">小心喔</b>油比較多的時候，整杯油（約 276 g）反而比較重。所以比輕重一定要「同樣多」才公平。';
+}
+function renderScale(){
+  const a=sc.cur*Math.PI/180,cx=180,cy=66,half=120,c=Math.cos(a),s=Math.sin(a);
+  const lx=cx-half*c,ly=cy-half*s,rx=cx+half*c,ry=cy+half*s;
+  const vOil=sc.mode==='same'?100:300;
+  const hO=12+vOil*.17,hW=12+100*.17;
+  const pan=(x,y,h,col,label,sub)=>
+    '<line class="thin" x1="'+x+'" y1="'+y+'" x2="'+(x-46)+'" y2="'+(y+76)+'"/>'+
+    '<line class="thin" x1="'+x+'" y1="'+y+'" x2="'+(x+46)+'" y2="'+(y+76)+'"/>'+
+    '<line class="ln" x1="'+(x-50)+'" y1="'+(y+76)+'" x2="'+(x+50)+'" y2="'+(y+76)+'"/>'+
+    '<rect x="'+(x-27)+'" y="'+(y+76-h)+'" width="54" height="'+h+'" rx="4" fill="'+col+'" fill-opacity=".85" stroke="var(--ink)" stroke-width="2"/>'+
+    '<text class="t" x="'+x+'" y="'+(y+98)+'">'+label+'</text><text class="t2" x="'+x+'" y="'+(y+114)+'">'+sub+'</text>';
+  svg.innerHTML=
+    '<line class="ln" x1="'+cx+'" y1="'+cy+'" x2="'+cx+'" y2="244"/><line class="ln" x1="'+(cx-50)+'" y1="244" x2="'+(cx+50)+'" y2="244"/>'+
+    '<line class="ln" x1="'+lx+'" y1="'+ly+'" x2="'+rx+'" y2="'+ry+'"/><circle cx="'+cx+'" cy="'+cy+'" r="6" fill="var(--accent)"/>'+
+    pan(lx,ly,hO,'var(--oil)','油 '+vOil+' mL','約 '+Math.round(vOil*.92)+' g')+
+    pan(rx,ry,hW,'var(--water)','水 100 mL','約 100 g');
+}
+document.querySelectorAll('input[name=scale]').forEach(r=>r.addEventListener('change',()=>{sc.mode=r.value;seen[r.value]=true;scaleTarget()}));
+scaleTarget();renderScale();
+
+/* ---------- fun layer ---------- */
+let AC=null,lastPopT=0,lastSay=0;
+function sfx(k){
+  const on=$('tgSound');if(!on||!on.checked)return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();
+    const t=AC.currentTime;
+    const T=(f,d,ty,v,f2,off)=>{off=off||0;const o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.setValueAtTime(f,t+off);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+off+d);
+      g.gain.setValueAtTime(v,t+off);g.gain.exponentialRampToValueAtTime(.0001,t+off+d);o.connect(g);g.connect(AC.destination);o.start(t+off);o.stop(t+off+d+.02)};
+    if(k==='pop')T(700,.12,'sine',.16,200);
+    else if(k==='ding'){T(880,.18,'triangle',.15);T(1320,.25,'triangle',.13,null,.1)}
+    else if(k==='star')[784,988,1175,1568].forEach((f,i)=>T(f,.22,'triangle',.14,null,i*.08));
+    else if(k==='pour')T(300,.25,'sine',.09,160);
+    else if(k==='shake')[0,.08,.16,.24].forEach(o=>T(180+Math.random()*80,.1,'square',.04,null,o));
+    else if(k==='fizz')T(2000,.15,'sawtooth',.025,3000);
+    else if(k==='no')T(220,.2,'sine',.1,160);
+  }catch(e){}
+}
+function popSfx(){const n=performance.now();if(n-lastPopT>150){lastPopT=n;sfx('pop')}}
+function say(t,force){
+  const n=performance.now();if(!force&&n-lastSay<2500)return;lastSay=n;
+  const b=$('bubble');if(!b)return;b.textContent=t;
+  const m=$('mascot');m.classList.remove('talk');void m.offsetWidth;m.classList.add('talk');
+}
+function mark(k,msg){if(!seen[k]){seen[k]=true;say(msg,true);sfx('ding')}}
+function confetti(n,el){
+  if(reduce)return;
+  const r=(el||$('stars')).getBoundingClientRect(),ox=r.left+r.width/2,oy=r.top+r.height/2;
+  const E=['⭐','🎉','✨','🫧','🔥','🌟'];
+  for(let i=0;i<n;i++){
+    const sp=document.createElement('span');sp.textContent=E[i%E.length];
+    sp.style.cssText='left:'+ox+'px;top:'+oy+'px;--dx:'+rnd(-170,170)+'px;--dy:'+rnd(-210,-40)+'px;--rot:'+rnd(-360,360)+'deg;animation-delay:'+rnd(0,.15)+'s';
+    $('conf').appendChild(sp);setTimeout(()=>sp.remove(),1800);
+  }
+}
+const sws=$('sws');
+COLS.forEach(([name,c],i)=>{
+  const b=document.createElement('button');b.type='button';b.className='sw';b.setAttribute('aria-label',name+'色水');
+  b.style.background=c||'var(--water)';b.setAttribute('aria-pressed',i===0?'true':'false');
+  b.onclick=()=>{wcol=c;[...sws.children].forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');say('哇，變成'+name+'色的魔法水！',true);sfx('ding')};
+  sws.appendChild(b);
+});
+cv.addEventListener('pointerdown',e=>{
+  const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;
+  const b=S.blobs.find(b=>Math.hypot(b.x-x,b.y-y)<b.r+10);if(!b)return;
+  b.dead=true;popped++;$('popN').textContent=popped;popSfx();
+  for(let k=0;k<8;k++)S.pops.push({x:b.x,y:b.y,vx:rnd(-80,80),vy:rnd(-110,-20),life:.6,r:rnd(1.5,3.2)});
+  if(popped===1)say('啵！被你戳破了～',true);
+  if(popped>=10&&!bonusDone){bonusDone=true;say('戳戳王誕生！隱藏徽章到手！',true);sfx('star');confetti(30,r&&cv);ui()}
+});
+
+/* ---------- missions ---------- */
+const OBS=[
+ [{t:'選好我的預測',f:()=>!!pred}],
+ [{t:'有色水球掉進水裡了',f:()=>S.water>=WATER_MAX-0.5},{t:'油浮在上面、水沉在下面',f:()=>ready()},{t:'搖亂之後，油和水自己又分開了',f:()=>S.settled}],
+ [{t:'試過「同樣多」',f:()=>seen.same},{t:'試過「油比較多」',f:()=>seen.more}],
+ [{t:'丟下發泡錠，看到氣泡冒出來',f:()=>seen.fizz},{t:'看到水球出現了',f:()=>seen.up}],
+ [{t:'看到氣泡抱著水球往上浮',f:()=>seen.up},{t:'看到水球到油上面後沉下來',f:()=>seen.down},{t:'開手電筒看看光怎麼照進去',f:()=>seen.light}],
+ [{t:'我說出了祕密 1，還有證據',m:'c1'},{t:'我說出了祕密 2，還有證據',m:'c2'}]
+];
+OBS.forEach((list,i)=>{
+  const ul=document.querySelector('[data-obs="'+i+'"]');
+  list.forEach(o=>{
+    const l=document.createElement('label');const c=document.createElement('input');c.type='checkbox';
+    if(o.m){l.className='manual';c.addEventListener('change',()=>{manual[o.m]=c.checked;ui()})}else c.disabled=true;
+    l.appendChild(c);l.appendChild(document.createTextNode(o.t));ul.appendChild(l);o.el=l;o.cb=c;
+  });
+});
+function shuf(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function buildQuiz(i){
+  const box=document.querySelector('[data-quiz="'+i+'"]'),d=QUIZ[i];
+  box.className='quiz';box.innerHTML='';
+  const t=document.createElement('div');t.className='qt';t.textContent='⭐ 挑戰題';
+  const q=document.createElement('p');q.className='q';q.textContent=d.q;
+  const w=document.createElement('div');w.className='opts';
+  const fb=document.createElement('p');fb.className='fb';fb.setAttribute('aria-live','polite');
+  shuf(d.o.map((x,k)=>({x,k}))).forEach(({x,k})=>{
+    const b=document.createElement('button');b.type='button';b.className='opt';b.textContent=x;
+    b.onclick=()=>{
+      if(k===d.a){b.classList.add('good');w.querySelectorAll('button').forEach(z=>z.disabled=true);fb.textContent='答對了！'+d.why;box.classList.add('won');
+        if(!Q[i]){Q[i]=1;ui(true,'挑戰成功')}}
+      else{b.classList.add('bad');b.disabled=true;fb.textContent='再想一想，換一個試試。';sfx('no');say('沒關係，再想想～偵探就是要多試幾次！',true)}
+    };
+    w.appendChild(b);
+  });
+  box.append(t,q,w,fb);
+}
+QUIZ.forEach((_,i)=>buildQuiz(i));
+const badgeBox=$('badges');
+BADGES.forEach(b=>{const d=document.createElement('span');d.className='badge';d.innerHTML='<span class="e">'+b[0]+'</span>'+b[1];badgeBox.appendChild(d)});
+const bb=document.createElement('span');bb.className='badge';bb.innerHTML='<span class="e">🎯</span>戳戳王（隱藏）';badgeBox.appendChild(bb);
+let lastStars=0,toastT=0;const doneLv=[0,0,0,0,0,0];
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200)}
+
+/* ---------- UI status ---------- */
+function ui(fromQuiz,why){
+  const rd=ready(),busy=!!S.pour||S.shake>0||S.beads.length>0;
+  $('bOil').disabled=busy||S.oil>=OIL_MAX;
+  $('bWater').disabled=busy||S.water>=WATER_MAX;
+  $('bShake').disabled=busy||!rd;
+  $('bHalf').disabled=!rd;$('bWhole').disabled=!rd;$('bAgain').disabled=!rd;
+  let m;
+  if(S.shake>0)m='搖搖搖…';
+  else if(S.beads.length)m='等一等，看油和水怎麼了。';
+  else if(S.oil<=0)m='按「① 倒油」，把油倒進瓶子。';
+  else if(S.pour)m='倒的時候看看水流到哪裡。';
+  else if(S.water<=0)m='再按「② 倒有色水」，看它掉到哪裡。';
+  else if(!S.shaken)m='瓶子準備好了！試試看「③ 搖一搖」。';
+  else m='可以再搖一次，或按「下一關」去比輕重。';
+  $('st2').textContent=m;
+  $('resPred').textContent=pred==='b'?'你猜 B，猜對了！':(pred?'你猜 '+pred.toUpperCase()+'，結果是 B。預測不一樣才是發現！':'結果是 B。');
+  let m4;
+  if(!rd)m4='瓶子還沒準備好。先到「倒一倒」關卡倒好油和水，或按下面的按鈕。';
+  else if(S.tabs.length)m4=S.tabs.some(t=>t.state==='fizz')?'發泡中…看看水球怎麼動！':'發泡錠正在往下沉…';
+  else if(S.fizzed)m4='發泡完了。想再看一次，可以再丟一顆。';
+  else m4='瓶子準備好了，丟一顆發泡錠試試看。';
+  $('st4').textContent=m4;
+  $('st5').textContent=S.tabs.length?'邊看邊說：氣泡抱著水球往上，破掉之後水球沉下來。':(rd?'按「再丟一顆看看」，這次專心找下面三件事。':'瓶子還沒準備好，先到「倒一倒」。');
+  $('bPreset').style.display=rd?'none':'';$('bPreset2').style.display=rd?'none':'';
+  /* missions */
+  OBS.forEach((list,i)=>{
+    let all=true;
+    list.forEach(o=>{const ok=o.m?manual[o.m]:o.f();if(ok&&!o.m)o.latched=true;const v=o.m?ok:(o.latched||ok);o.cb.checked=v;o.el.classList.toggle('ok',v);if(!v)all=false});
+    if(all)A[i]=1;
+    const dz=document.querySelector('[data-disc="'+i+'"]');if(dz)dz.hidden=!A[i];
+    document.querySelector('[data-quiz="'+i+'"]').classList.toggle('locked',!A[i]);
+  });
+  const n=A.reduce((a,b)=>a+b,0)+Q.reduce((a,b)=>a+b,0);
+  $('starN').textContent=n;$('barFill').style.width=(n/12*100)+'%';$('barBox').setAttribute('aria-valuenow',n);
+  $('rank').textContent=n>=12?'金牌偵探':n>=8?'王牌偵探':n>=4?'助理偵探':'見習偵探';
+  [...badgeBox.children].slice(0,6).forEach((b,i)=>b.classList.toggle('on',!!(A[i]&&Q[i])));bb.classList.toggle('on',bonusDone);
+  for(let i=0;i<6;i++){if(A[i]&&Q[i]&&!doneLv[i]){doneLv[i]=1;sfx('star');confetti(26,badgeBox.children[i]);toast(BADGES[i][0]+' 徽章：'+BADGES[i][1]);say('關卡完成！拿到「'+BADGES[i][1]+'」徽章！',true)}}
+  [...nav.children].forEach((b,i)=>b.classList.toggle('done',!!(A[i]&&Q[i])));
+  if(n>=12&&$('cert').hidden)setTimeout(()=>confetti(60,$('cert')),150);
+  $('cert').hidden=n<12;
+  $('certTxt').textContent=($('nameIn').value.trim()?$('nameIn').value.trim()+'，':'')+'12 顆星全部到手，你找到了熔岩燈的兩個祕密！';
+  if(n>lastStars){
+    sfx('ding');confetti(10);
+    $('stars').classList.remove('pop');void $('stars').offsetWidth;$('stars').classList.add('pop');
+    toast('⭐ 第 '+n+' 顆星'+(fromQuiz?'・'+why:'・觀察完成'));
+  }
+  lastStars=n;
+}
+$('nameIn').addEventListener('input',()=>ui());
+
+$('bOil').onclick=()=>pour('oil');
+$('bWater').onclick=()=>pour('water');
+$('bShake').onclick=shake;
+$('bHalf').onclick=()=>drop(false);
+$('bWhole').onclick=()=>drop(true);
+$('bAgain').onclick=()=>drop(false);
+$('bPreset').onclick=preset;$('bPreset2').onclick=preset;
+$('btnReset').onclick=()=>{fresh();ui()};
+$('bRestart').onclick=()=>{fresh();pred=null;document.querySelectorAll('input[name=pred]').forEach(r=>r.checked=false);
+  A.fill(0);Q.fill(0);Object.keys(seen).forEach(k=>seen[k]=false);manual.c1=manual.c2=false;lastStars=0;doneLv.fill(0);popped=0;bonusDone=false;$('popN').textContent=0;wcol=null;[...sws.children].forEach((x,i)=>x.setAttribute('aria-pressed',i===0?'true':'false'));
+  OBS.forEach(l=>l.forEach(o=>{o.latched=false}));QUIZ.forEach((_,i)=>buildQuiz(i));
+  $('tgLight').checked=false;sc.mode='same';document.querySelector('input[name=scale][value=same]').checked=true;scaleTarget();$('nameIn').value='';go(0)};
+
+/* ---------- loop ---------- */
+let last=performance.now(),fc=0;
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  update(dt);draw();
+  if(Math.abs(sc.target-sc.cur)>.02||fc%30===0){sc.cur+=(sc.target-sc.cur)*Math.min(1,dt*5);if(step===2)renderScale()}
+  if(++fc%6===0)ui();
+  requestAnimationFrame(frame);
+}
+go(0);ui();requestAnimationFrame(frame);
+})();
+</script>
